@@ -4,9 +4,9 @@ require(tidyr)
 require(dplyr)
 require(ggplot2)
 
-folderName <- "C:/Users/Arseny/Documents/2_Behavior/Alex tracker/"
+folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/data/"
 
-d <- read.csv(paste(folderName,'Alcohol1.csv',sep=""))
+d <- read.csv(paste(folderName,'Alcohol2.csv',sep=""))
 # headers: time,x1,y1,a1,x2,y2,a2,x3,y3,a3,x4,y4,a4,x5,y5,a5,
 
 names(d)
@@ -45,9 +45,9 @@ for(iTad in 1:5){
   
   p <- ggplot() + theme_classic()
   for(t in 1:nTime){
-    if(!is.na(tads[[iTad]]$v[t]) & t>10 & t<nTime-10){
+    if(!is.na(tads[[iTad]]$v[t]) & t>3 & t<nTime-20){
       if(tads[[iTad]]$v[t]>0.5){
-        p <- p + geom_path(data=data.frame(x=-10:10, y=tads[[iTad]]$v[(t-10):(t+10)]), aes(x,y))
+        p <- p + geom_path(data=data.frame(x=-3:10, y=tads[[iTad]]$v[(t-3):(t+20)]), aes(x,y))
       }
     }
   }
