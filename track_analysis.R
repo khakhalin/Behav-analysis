@@ -12,7 +12,7 @@ do_basics = 0 # Whether we need to calculate per-tadpole values, or go straight 
 folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/data/" # Work
 # folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/data/"
 
-expName = 'Control1'
+expName = 'Alcohol1'
 d <- read.csv(paste(folderName,expName,'.csv',sep=""))
 # headers: time,x1,y1,a1,x2,y2,a2,x3,y3,a3,x4,y4,a4,x5,y5,a5,
 
