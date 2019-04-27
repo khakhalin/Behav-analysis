@@ -10,8 +10,8 @@ rm(list=ls()) # Clear workspace
 do_basics = 0 # Whether we need to calculate per-tadpole values, or go straight to schooling
 
 ### As silly R cannot do relative folders well, have to put full path here
-# folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/data/" # Work
-folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/data/"
+folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/data/" # Work
+# folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/data/"
 
 expName = 'Control4'
 d <- read.csv(paste(folderName,expName,'.csv',sep=""))
@@ -63,12 +63,6 @@ dishCenter <- c(mean(c(dishSides[1],dishSides[2])),mean(c(dishSides[3],dishSides
 dishCenter
 
 if(do_basics){
-  # Plot trajectory for 1 tadpole:
-  ggplot(data=tads[[2]],aes(x,y,color=v)) + geom_path() + # it's good to use geom_path for trajectories!
-    theme_void() + scale_colour_viridis() + coord_fixed(ratio=1)
-  last_plot() + geom_point(data=data.frame(x=dishCenter[1],y=dishCenter[2]),aes(x,y),color="red")
-  
-  
   ### --- Average speeds
   out <- data.frame(expName=rep(expName,5),id=1:5) # Initialize output dataframe
   newSlice <- data.frame()
@@ -208,6 +202,13 @@ stop() # Don't execute further
 
 
 ### ------- Assorted visual tests
+
+# Plot trajectory for 1 tadpole:
+ggplot(data=tads[[4]],aes(x,y,color=v)) + geom_path() + # it's good to use geom_path for trajectories!
+  theme_void() + scale_colour_viridis() + coord_fixed(ratio=1) + guides(color=FALSE)
+
+last_plot() + geom_point(data=data.frame(x=dishCenter[1],y=dishCenter[2]),aes(x,y),color="red")
+
 
 # Check if time values make sense:
 qplot(1:nrow(tads[[1]]),tads[[1]]$time) + theme_bw()
