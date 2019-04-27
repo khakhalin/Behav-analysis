@@ -9,16 +9,21 @@ rm(list=ls()) # Clear workspace
 
 do_basics = 0 # Whether we need to calculate per-tadpole values, or go straight to schooling
 
-folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/data/" # Work
-# folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/data/"
+### As silly R cannot do relative folders well, have to put full path here
+# folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/data/" # Work
+folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/data/"
 
-expName = 'Alcohol1'
+expName = 'Control4'
 d <- read.csv(paste(folderName,expName,'.csv',sep=""))
+# headers: time,x1,y1,a1,x2,y2,a2,x3,y3,a3,x4,y4,a4,x5,y5,a5,
 # headers: time,x1,y1,a1,x2,y2,a2,x3,y3,a3,x4,y4,a4,x5,y5,a5,
 
 names(d)
-d <- select(d,-X) # Remove last empty column
+if("X" %in% names(d))
+  d <- select(d,-X) # Remove last empty column (not sure where it comes from, for some sets)
 d <- d[-(1:10),] # remove first 10 frames
+names(d)[1] <- "time" # Rename 1st col (if it's named weirdly)
+d <- d %>% filter(!is.na(time)) # Skip all NA rows
 nTime <- dim(d)[1]
 dd <- d[-1,]-d[1:(nTime-1),] # Differences dataframe
 dd$step <- dd$time
@@ -29,13 +34,18 @@ d <- d[1:(nTime-1),] # Shorten, to make same length as dd
 ### --- Pack tadpole data in a list of dataframes
 tads <- list() # Init empty list
 for(iTad in 1:5){ # normally would be in 1:5
-  print(iTad)
+  # print(iTad)
   tads[[iTad]] <- data.frame(time=d$time, a=d[[3*(iTad-1)+4]],
                              x=d[[3*(iTad-1)+2]], y=d[[3*(iTad-1)+3]],
                              vx=dd[[3*(iTad-1)+2]]/dd$step, vy=dd[[3*(iTad-1)+3]]/dd$step)
+  
+  for(t in 2:nrow(tads[[iTad]])-1){ # Running average for speeds: this will slow everhything down a lot :(
+    tads[[iTad]]$vx[t] <- mean(tads[[iTad]]$vx[(t-1):(t+1)], na.rm=T)
+    tads[[iTad]]$vy[t] <- mean(tads[[iTad]]$vy[(t-1):(t+1)], na.rm=T)
+  }
   tads[[iTad]] <- mutate(tads[[iTad]], v=sqrt(vx^2 + vy^2))
 }
-head(tads[[1]])
+
 
 ### --- Guess dish edges from trajectories:
 dishSides <- c(median(c(min(tads[[1]]$x),min(tads[[2]]$x),min(tads[[3]]$x),min(tads[[4]]$x),min(tads[[5]]$x))),
@@ -115,24 +125,38 @@ if(do_basics){
 
 ### ------------------ Schooling assessment
 # Part one: calculate the distances
-dfDist <- data.frame()
+dfDist <- data.frame() # pairwise inter-tadpole distances
+dfAlign <- data.frame() # pairwise inter-tadpole alignment
 for(iTad in 1:5){
-  if(iTad>1){ # Because for loops in R are weird, need this extra check
-    tempi <- tads[[iTad]][,1:4] # Only first 4 columns
-    names(tempi) <- c("t1","a1","x1","y1") # Rename
+  if(iTad>1){ # Because for loops in R are weird (can go backwards), need this extra check
+    tempi <- tads[[iTad]][,1:7] # Only get first 7 columns (there should be only 7 columns, but just in case)
+    names(tempi) <- c("t1","a1","x1","y1","vx1","vy1","v1") # Rename
     for(jTad in 1:(iTad-1)){
-      temp <- cbind(tempi,tads[[jTad]][,1:4]) # Add second tad with original column names
-      temp <- cbind(temp,with(temp,sqrt((x-x1)^2 + (y-y1)^2))) # Calculate distances
-      names(temp)[length(names(temp))]<-"d"  # Rename last column
-      if(nrow(dfDist)==0)
-        dfDist <- data.frame(d=temp$d)
-      else
+      temp <- cbind(tempi,tads[[jTad]][,1:7]) # Add second tad with original column names
+      temp <- cbind(temp,with(temp,sqrt((x-x1)^2 + (y-y1)^2))) # Calculate distance across time
+      names(temp)[length(names(temp))]<-"d"  # Rename this new column to d (for distance)
+      temp <- cbind(temp,with(temp,(vx1*vx + vy1*vy)/(v1*v)))
+      names(temp)[length(names(temp))]<-"align"  # Rename this new column to align
+      if(nrow(dfDist)==0){
+        dfDist <- data.frame(y=temp$d) # Name doesn't matter here; will be renamed below
+        dfAlign <- data.frame(y=temp$align)
+      }
+      else{
         dfDist <- cbind(dfDist, temp$d)
+        dfAlign <- cbind(dfAlign, temp$align)
+      }
       names(dfDist)[length(names(dfDist))]<-sprintf("c%d%d",iTad,jTad)  # Rename last column
+      names(dfAlign)[length(names(dfAlign))]<-sprintf("c%d%d",iTad,jTad)  # Rename last column
     }
   }
 }
-#head(dfDist)
+#' This align value is naive and imperfect, as it compares speed values in a given point, and this estimation is
+#' very noisy. A better estimation should be based on a smoothed model of tadpole swimming. Also if v==0 happens,
+#' then dot product/v = nan, and if all are nan, the mean is also nan. Which is silly.
+#' The running average I added above (with length=3) should help, but it would be even better to just carry last
+#' reliable orientation over small noisy frames, assuming that once a tadpole arrived at a location, it remains stable,
+#' and all micro-motions are just noise.
+
 
 # Part two: calculate certainties
 for(iTad in 1:5){
@@ -150,25 +174,47 @@ maxTime <- tads[[1]]$time[nrow(tads[[1]])]
 schooling <- data.frame() # We'll be collecting data here
 for(iFrame in 0:5){
   currentTime <- afull$time[1]+iFrame*60*1000*2
-  currentFrame <- min(which(afull$time>currentTime & afull$a>0.8)) # Find closest certain frame
-  if(currentFrame <= maxTime){ # We are still within the video
-    print(sprintf("%d",currentFrame))
-    temp <- data.frame(d=as.numeric(dfDist[currentFrame,])) # Select a row, transpose into a column
-    schooling <- rbind(schooling, summarize(temp,m=mean(d),s=sd(d)))
+  if(currentTime<=maxTime){
+    currentFrame <- min(which(afull$time>currentTime & afull$a>0.8))+1 # Find closest certain frame, add 1 for safety
+    if(currentFrame <= maxTime){ # We are still within the video
+      print(sprintf("%d",currentFrame))
+      temp <- data.frame(d=as.numeric(dfDist[currentFrame,])) # Select a row, transpose into a column
+      
+      ## Calculate aligns now
+      align <- c()
+      for(iDist in 1:10){
+        if(dfDist[currentFrame,iDist]<dishDiameter/2) # If closer than r_dish...
+          align <- c(align, dfAlign[currentFrame,iDist]) # add this align value to the list
+      }
+      
+      tempSum <- summarize(temp, dm=mean(d), ds=sd(d))
+      schooling <- rbind(schooling, data.frame(dm=tempSum$dm, ds=tempSum$ds, 
+                                               align=mean(align, na.rm=T))) # Store outputs
+    }
   }
 }
-schooling <- schooling %>% mutate(m=m/dishDiameter*14, s=s/dishDiameter*14)
+schooling <- schooling %>% mutate(dm=dm/dishDiameter*14, ds=ds/dishDiameter*14)
 schooling <- cbind(data.frame(name=rep(expName,nrow(schooling))),schooling)
 
+print(sprintf("Number of rows: %d",nrow(tads[[1]])), quote=F)
+print(sprintf("Total length: %d min",round(tads[[1]]$time[nrow(tads[[1]])]/1000/60)), quote=F)
 
 print(schooling, row.names=FALSE) # Main output for this section
+
+
 
 stop() # Don't execute further
 
 
 
-
 ### ------- Assorted visual tests
+
+# Check if time values make sense:
+qplot(1:nrow(tads[[1]]),tads[[1]]$time) + theme_bw()
+print(last_plot())
+
+# Check accuracy history
+ggplot(data=gather(select(head(afull),-a),key,a,-time),aes(time,a,color=key)) + geom_line() + theme_classic()
 
 # Do uncertain points have higher speed?
 ggplot(tads[[1]],aes(a,v)) + geom_jitter(alpha=0.2,w=0.02,h=0) + theme_classic() + 
