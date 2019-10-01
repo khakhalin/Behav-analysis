@@ -7,8 +7,9 @@ require(viridis)
 
 rm(list=ls()) # Clear workspace
 
-folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/" # Work
-#folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/"
+folderName <- "C:/Users/Arseny/Documents/2_Behavior/behav-git/" # Arseny, work computer
+#folderName <- "C:/Users/Sysadmin/Documents/_Science/Behav-analysis-git/" # Arseny, home computer
+# Addie, you'll need to add your row here, if you use this file, linking your data
 
 ### ------------------- Part 1: per-tadpole analysis
 
