@@ -58,3 +58,14 @@ ggplot(ds2, aes(color=group, trial, m)) +
   geom_point() +
   theme_bw() +
   geom_smooth(method='lm', se=F) # Not really
+
+# Data consistency test (data printed back and manually compared to the original table)
+for(i in 2:max(d1$id)){
+  print(i)
+  print(d1[d1$id==i,'group'][1])
+  out = ''
+  for(j in 1:16){
+    out = cat(out,d1[(d1$id==i) & (d1$trial==j), 'response'])
+  }
+  print(out)
+}
