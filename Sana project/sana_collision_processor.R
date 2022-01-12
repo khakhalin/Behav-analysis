@@ -44,7 +44,8 @@ head(d1)
 ds <- d1 %>% group_by(group, id) %>% summarize(m=mean(response))
 dss <- ds %>% group_by(group) %>% summarize(m = mean(m))
 ggplot(ds, aes(group, m, fill=group)) + 
-  geom_dotplot(binaxis='y', stackdir='center', dotsize=0.6) + 
+  #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.6) + 
+  geom_jitter(aes(color=group), width=0.1, size=3) +
   geom_point(data=dss, shape=15, size=5) +
   theme_bw() +
   xlab('Experimental group') +
